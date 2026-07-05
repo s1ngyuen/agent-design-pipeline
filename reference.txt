@@ -1,0 +1,122 @@
+AGENT PIPELINE REFERENCE
+=========================
+
+SKILLS (user-invokable)
+-----------------------
+Trigger automatically when you describe what you want, or call explicitly with /skill-name.
+
+Skill               | Invoke                              | What it does
+--------------------|-------------------------------------|--------------------------------------------------------------
+new-project         | /new-project or "start a new        | 6-stage interview -> produces brief.md
+                    | project"                            |
+build-project       | /build-project <folder> or          | Orchestrates all agents in sequence from brief.md
+                    | "build the project"                 |
+review-new-project  | /review-new-project                 | Structured retrospective -> edits new-project skill
+frontend-design     | "build this UI" / "create a page"   | Distinctive, production-grade UI -- avoids generic AI aesthetics
+theme-factory       | "choose a theme" / no brand         | Presents palette + font options, applies chosen theme
+                    | in brief                            |
+web-artifacts-      | "build a React app" / complex       | React + TypeScript + Vite + shadcn/ui -> bundled bundle.html
+builder             | interactive UI                      |
+webapp-testing      | Used by qa-tester internally        | Playwright testing patterns for static, dev server, or dynamic apps
+
+
+AGENTS (spawned by Claude as needed)
+-------------------------------------
+
+Agent               | Model   | maxTurns | Role
+--------------------|---------|----------|-------------------------------------------------------------
+project-architect   | sonnet  | 30       | Reads brief.md -> writes plan.md (tech stack, file
+                    |         |          | structure, component hierarchy, API routes, build order)
+web-scraper         | haiku   | 15       | Fetches reference URLs -> extracts design tokens, copy,
+                    |         |          | layout. Also extracts HTML tables by CSS class name
+designer            | sonnet  | 20       | Reads brief + plan + scraper output -> produces design
+                    |         |          | spec (colours, typography, spacing, components)
+content-writer      | sonnet  | 20       | Reads brief + plan -> writes content.md (all page copy,
+                    |         |          | CTAs, meta tags, form labels)
+backend-developer   | sonnet  | unlimited| Builds APIs, database schema, auth, seed data
+frontend-developer  | sonnet  | unlimited| Builds all pages and components from brief + plan +
+                    |         |          | content + design spec
+ux-reviewer         | haiku   | 15       | Reviews built pages for usability, flow, accessibility
+                    |         |          | -- through the lens of the brief's target audience
+code-reviewer       | sonnet  | 15       | Reviews all code for security vulnerabilities and
+                    |         |          | efficiency issues
+qa-tester           | sonnet  | unlimited| Tests against every page and user flow in the brief
+deployment          | haiku   | 30       | Pre-launch checklist, build config, env vars, hosting
+                    |         |          | setup, HTTP headers, post-deploy verification
+
+
+RULES (auto-load based on file type)
+--------------------------------------
+
+Rule                  | Loads when
+----------------------|------------------------------------------------------------
+technical-defaults.md | Always
+accessibility.md      | Editing .html, .tsx, .jsx, .svelte, .astro
+responsive-design.md  | Same
+performance.md        | Same
+seo-meta.md           | Same
+security.md           | Same + .py, .go, .rb
+workflow.md           | Manual only -- reference recreation
+design-fidelity.md    | Manual only -- reference recreation
+
+
+FULL SITE BUILD FLOW
+---------------------
+
+/new-project
+     |
+     v
+ 6-stage interview
+ (idea -> pages -> data -> schemas -> design -> tech)
+     |
+     v
+ Review brief in chat -> approve -> brief.md saved
+     |
+     v
+/build-project <folder>
+     |
+     |-- Phase 1: Foundation (sequential)
+     |     |-- project-architect -> plan.md
+     |     └-- web-scraper (if reference URLs in brief)
+     |
+     |-- Phase 2: Design & Content (parallel)
+     |     |-- designer -> design spec
+     |     └-- content-writer -> content.md
+     |
+     |-- Phase 3: Build
+     |     |-- static site -> frontend-developer only
+     |     └-- full-stack -> backend-developer + frontend-developer
+     |              (parallel if frontend doesn't depend on APIs)
+     |
+     |-- Phase 4: Review (parallel)
+     |     |-- ux-reviewer
+     |     |-- code-reviewer
+     |     └-- qa-tester
+     |           |
+     |           v
+     |     Consolidated fix list -> approve -> fixes applied
+     |
+     └-- Phase 5: Deployment
+           └-- deployment -> live site + deployment.md
+
+
+PROJECT FILES PRODUCED
+-----------------------
+
+<project-name>/
+|-- brief.md        <- source of truth (new-project)
+|-- plan.md         <- tech blueprint (project-architect)
+|-- content.md      <- all copy (content-writer)
+|-- deployment.md   <- deploy record (deployment)
+└-- references/     <- screenshots & reference images
+
+
+REFERENCE RECREATION (separate flow)
+--------------------------------------
+If cloning an existing design rather than building from a brief:
+
+1. Provide a reference screenshot
+2. web-scraper extracts tokens from the live URL (optional)
+3. frontend-developer builds against workflow.md
+   (generate -> screenshot -> compare -> fix, min 2 rounds)
+4. design-fidelity.md rules apply -- match exactly, don't improve
