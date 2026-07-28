@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ── Slab Ink design tokens — see design-spec.md ────────────────────────── */
+:root {
+  --color-bone: #faf7f1;
+  --color-bone-100: #f1ebdd;
+  --color-paper: #ffffff;
+
+  --color-ink: #1c1815;
+  --color-ink-70: #4a4038;
+  --color-ink-50: #756b62;
+
+  --color-border: #e4ddd0;
+
+  --color-gold: #c08829;
+  /* #8f621b, not the lighter #9c6c1f originally spec'd in design-spec.md —
+     darkened after an axe-core pass found gold-on-bone text (e.g. the
+     landing page's "SCANNA" wordmark label, "View details →" links) at
+     only 2.89:1. This shade clears WCAG AA's 4.5:1 for normal text on both
+     --color-bone and --color-paper (~5.0 / ~5.3:1) while --color-gold
+     itself stays unchanged for background fills (buttons/badges) paired
+     with --color-ink text. */
+  --color-gold-dark: #8f621b;
+  --color-gold-soft: #f3e3c4;
+
+  --color-slate: #6e6a63;
+  --color-slate-soft: #e7e4dc;
+  --color-slate-700: #48453f;
+
+  --color-plum: #6e3f52;
+  --color-plum-dark: #54303f;
+  --color-plum-soft: #eddee3;
+
+  --color-danger: #a23b2e;
+  --color-danger-soft: #f6e2de;
+}
+
+@theme inline {
+  --color-bone: var(--color-bone);
+  --color-bone-100: var(--color-bone-100);
+  --color-paper: var(--color-paper);
+  --color-ink: var(--color-ink);
+  --color-ink-70: var(--color-ink-70);
+  --color-ink-50: var(--color-ink-50);
+  --color-border: var(--color-border);
+  --color-gold: var(--color-gold);
+  --color-gold-dark: var(--color-gold-dark);
+  --color-gold-soft: var(--color-gold-soft);
+  --color-slate: var(--color-slate);
+  --color-slate-soft: var(--color-slate-soft);
+  --color-slate-700: var(--color-slate-700);
+  --color-plum: var(--color-plum);
+  --color-plum-dark: var(--color-plum-dark);
+  --color-plum-soft: var(--color-plum-soft);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+
+  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Visible focus ring everywhere — accessibility.md: never outline-none
+   without a replacement. */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

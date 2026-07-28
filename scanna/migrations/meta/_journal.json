@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785153823889,
+      "tag": "0000_chief_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785154129185,
+      "tag": "0001_brave_mysterio",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785194263091,
+      "tag": "0002_chemical_nekra",
+      "breakpoints": true
+    }
+  ]
+}
