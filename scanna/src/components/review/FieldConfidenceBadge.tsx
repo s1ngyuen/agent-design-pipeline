@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/Badge";
 
-export type FieldConfidenceKind = "high" | "check" | "cert";
+export type FieldConfidenceKind = "high" | "check" | "cert" | "checklist";
 
 /** Per-field confidence indicator — content.md "Field Confidence Badges".
  * Neutral labels, no color-as-verdict beyond a mild gold nudge on "check
  * this" (never red — nothing here is an error, just worth a glance). */
 export function FieldConfidenceBadge({ kind }: { kind: FieldConfidenceKind }) {
   if (kind === "cert") return <Badge tone="slate">From cert record</Badge>;
+  if (kind === "checklist") return <Badge tone="slate">From checklist</Badge>;
   if (kind === "high") return <Badge tone="neutral">High confidence</Badge>;
   return <Badge tone="gold">Check this</Badge>;
 }

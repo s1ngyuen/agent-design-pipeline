@@ -74,7 +74,7 @@ function toCardAttributes(state: CardFormState): CardAttributes {
   };
 }
 
-type Source = "auto-id" | "cert" | "manual";
+type Source = "auto-id" | "cert" | "manual" | "search";
 
 export interface AcquisitionInput {
   acquisition_price: number;
@@ -161,6 +161,7 @@ export function ManualCorrectionForm({
 
   function badgeFor(field: keyof CardAttributes): FieldConfidenceKind {
     if (source === "cert") return "cert";
+    if (source === "search") return "checklist";
     if (source === "manual") return "high"; // no badge noise on pure manual entry
     return confidenceToKind(confidence?.[field]);
   }
@@ -405,7 +406,9 @@ export function ManualCorrectionForm({
       <p className="text-sm text-ink-70">
         {source === "cert"
           ? `Grade, player, and set come directly from ${state.grader || "the grader"}'s certification record. If something looks off, it's worth double-checking the cert number was scanned correctly.`
-          : "This is our best read of the card, not a guarantee. Fix anything that's wrong before you save."}
+          : source === "search"
+            ? "Card identity fields came from our checklist database — condition and grade are still yours to fill in."
+            : "This is our best read of the card, not a guarantee. Fix anything that's wrong before you save."}
       </p>
 
       {requireAcquisition && (

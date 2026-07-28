@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CameraView, type ScanMode } from "./CameraView";
-import { ScanModeToggle } from "./ScanModeToggle";
+import { ScanModeToggle, type EntryMode } from "./ScanModeToggle";
+import { CardSearchEntry } from "./CardSearchEntry";
 import { IdentifiedCardSummary } from "@/components/review/IdentifiedCardSummary";
 import { ManualCorrectionForm, type AcquisitionInput } from "@/components/review/ManualCorrectionForm";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +13,7 @@ import { recognizeVision, recognizeCert, estimateValue } from "@/lib/clientPipel
 import { parseCertPayload } from "@/lib/certBarcode";
 import type { CardAttributes, CardAttributesConfidence, ValueEstimate } from "@/domain/types";
 
-type FlowSource = "auto-id" | "cert" | "manual";
+type FlowSource = "auto-id" | "cert" | "manual" | "search";
 
 // Brief confirmation flash between capture and the (slower) recognize call —
 // lets the user know the photo/code was actually captured and they can stop
@@ -70,7 +71,7 @@ export function ScanAndReviewFlow({
   startInManualEntry,
 }: ScanAndReviewFlowProps) {
   const online = useOnlineStatus();
-  const [mode, setMode] = useState<ScanMode>("auto-id");
+  const [mode, setMode] = useState<EntryMode>("auto-id");
   const [step, setStep] = useState<Step>(
     startInManualEntry ? { kind: "review", attributes: {}, source: "manual" } : { kind: "capture" },
   );
@@ -215,6 +216,17 @@ export function ScanAndReviewFlow({
             Enter manually
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (mode === "search") {
+    return (
+      <div className="flex flex-col items-center gap-6">
+        <ScanModeToggle mode={mode} onChange={setMode} />
+        <CardSearchEntry
+          onSelect={(attributes) => setStep({ kind: "review", attributes, source: "search" })}
+        />
       </div>
     );
   }

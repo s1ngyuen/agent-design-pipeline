@@ -7,7 +7,7 @@ export function IdentifiedCardSummary({
   source,
 }: {
   attributes: Partial<CardAttributes>;
-  source: "auto-id" | "cert" | "manual";
+  source: "auto-id" | "cert" | "manual" | "search";
 }) {
   const title = [attributes.year, attributes.manufacturer, attributes.product].filter(Boolean).join(" ");
   const subtitle = [attributes.player, attributes.card_number && `#${attributes.card_number.replace(/^#/, "")}`]
@@ -20,9 +20,11 @@ export function IdentifiedCardSummary({
       <p className="mt-1 text-sm text-ink-70">
         {source === "cert"
           ? "Matched from the cert number. This comes straight from the grading company's record, but give it a quick look before saving."
-          : source === "manual"
-            ? "Enter the card's details below."
-            : "Here's what we read. Check each field — anything we're not sure about is flagged."}
+          : source === "search"
+            ? "Matched from our checklist database — real card data. Just fill in condition/grade below."
+            : source === "manual"
+              ? "Enter the card's details below."
+              : "Here's what we read. Check each field — anything we're not sure about is flagged."}
       </p>
       {(title || subtitle) && (
         <div className="mt-4 rounded-lg bg-bone-100 px-4 py-3">
