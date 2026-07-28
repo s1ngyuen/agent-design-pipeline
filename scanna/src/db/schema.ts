@@ -223,6 +223,65 @@ export const checklistCards = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// value_estimate_cache — memoizes GET /api/estimate's Claude web-search
+// result by exact card identity + condition/grade (everything
+// estimateCardValue() actually considers — see buildUserPrompt in
+// claudeEstimate.ts). Estimating is a live, multi-round web-search Claude
+// call (real cost + real latency, close to the 60s function timeout on its
+// own) — two identical intake scans (e.g. a multi-copy lot of the same
+// rookie parallel) shouldn't pay for that twice. Reads hit this first;
+// /api/estimate only calls Claude when there's no row here or the caller
+// explicitly passes forceRecalculate.
+//
+// No DB-level uniqueness constraint: several columns here are nullable
+// (parallel_name, print_run, grade, grader), and Postgres treats every NULL
+// as distinct under a unique index — the same bug already hit and fixed for
+// checklist_cards.card_number. Rather than force nullable pricing fields
+// into non-null sentinels, cache reads/writes go through
+// lib/estimate/estimateCache.ts, which matches NULLs explicitly
+// (isNull vs eq) and always inserts a fresh row rather than upserting —
+// an occasional duplicate row from a race is harmless (reads take the
+// newest match), unlike a broken cache-hit rate from a bad unique index.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const valueEstimateCache = pgTable(
+  'value_estimate_cache',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    sport:         sportEnum('sport').notNull(),
+    league:        text('league'),
+    player:        text('player').notNull(),
+    team:          text('team').notNull(),
+    year:          text('year').notNull(),
+    manufacturer:  text('manufacturer').notNull(),
+    product:       text('product').notNull(),
+    card_number:   text('card_number').notNull(),
+    parallel_name: text('parallel_name'),
+    print_run:     integer('print_run'),
+    is_auto:       boolean('is_auto').notNull(),
+    is_rookie:     boolean('is_rookie').notNull(),
+    condition:     conditionEnum('condition').notNull(),
+    grade:         numeric('grade'),
+    grader:        graderEnum('grader'),
+
+    estimate_detail: jsonb('estimate_detail').notNull(), // shape = ValueEstimate (src/domain/types.ts)
+
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    lookupIdx: index('value_estimate_cache_lookup_idx').on(
+      t.sport,
+      t.player,
+      t.year,
+      t.manufacturer,
+      t.product,
+      t.card_number,
+    ),
+  }),
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 // ebay_listings
 // ─────────────────────────────────────────────────────────────────────────
 

@@ -11,16 +11,24 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { cardAttributesSchema } from '@/domain/cardAttributesSchema';
 import { estimateCardValue, ClaudeEstimateError } from '@/lib/estimate/claudeEstimate';
+import { lookupCachedEstimate, saveEstimateToCache } from '@/lib/estimate/estimateCache';
 
 // ── POST /api/estimate ──────────────────────────────────────────────────────
 // Pure function endpoint (plan.md §5) — takes CardAttributes, returns a
-// ValueEstimate. Does NOT persist anything; the caller (Collection's
-// POST /api/cards or Research's POST /api/lookups) is responsible for
-// storing the result. Shared by both Collection and Research flows via
-// lib/pipeline/identifyAndEstimate.ts.
+// ValueEstimate (wrapped with cache metadata — see value_estimate_cache in
+// schema.ts). Does NOT persist anything to cards/lookups; the caller
+// (Collection's POST /api/cards or Research's POST /api/lookups) is
+// responsible for storing the result. Shared by both Collection and
+// Research flows via lib/pipeline/identifyAndEstimate.ts.
+//
+// Checks the cache first (same card identity + condition/grade — a live
+// Claude web-search call is real cost and close to the 60s timeout on its
+// own, not worth repeating for e.g. a multi-copy lot of the same parallel).
+// Pass forceRecalculate to skip the cache and get a fresh live estimate.
 
 const bodySchema = z.object({
   card: cardAttributesSchema,
+  forceRecalculate: z.boolean().optional().default(false),
 });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -44,9 +52,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const { card, forceRecalculate } = parsedBody.data;
+
+  if (!forceRecalculate) {
+    const cached = await lookupCachedEstimate(card);
+    if (cached) {
+      return NextResponse.json({ estimate: cached.estimate, cached: true, cachedAt: cached.cachedAt });
+    }
+  }
+
   try {
-    const estimate = await estimateCardValue(parsedBody.data.card);
-    return NextResponse.json(estimate);
+    const estimate = await estimateCardValue(card);
+    await saveEstimateToCache(card, estimate);
+    return NextResponse.json({ estimate, cached: false, cachedAt: null });
   } catch (err) {
     if (err instanceof ClaudeEstimateError) {
       // err.message is a generic wrapper ("Anthropic API request failed") —

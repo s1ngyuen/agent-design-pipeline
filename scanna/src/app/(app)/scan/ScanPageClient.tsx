@@ -6,10 +6,12 @@ import { ScanAndReviewFlow } from "@/components/scan/ScanAndReviewFlow";
 import { ScanNextButton } from "@/components/review/ScanNextButton";
 import { ValueEstimateBreakdown } from "@/components/card-detail/ValueEstimateBreakdown";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { createCard, ApiError, type CreateCardInput } from "@/hooks/useCards";
+import { estimateValue } from "@/lib/clientPipeline";
 import type { CardAttributes, ValueEstimate } from "@/domain/types";
 import type { AcquisitionInput } from "@/components/review/ManualCorrectionForm";
 
@@ -23,6 +25,8 @@ interface PendingCard {
   attrs: CardAttributes;
   estimate: ValueEstimate | null;
   acquisition?: AcquisitionInput;
+  cached: boolean;
+  cachedAt: string | null;
 }
 
 export function ScanPageClient() {
@@ -36,6 +40,7 @@ export function ScanPageClient() {
   const [flowKey, setFlowKey] = useState(0);
   const [pending, setPending] = useState<PendingCard | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   async function saveCard(input: CreateCardInput) {
     if (!online) {
@@ -54,7 +59,12 @@ export function ScanPageClient() {
   // the user reviews before choosing to add it — never an automatic save,
   // same separation Research already had (Get Value Estimate, then a
   // distinct Add to Inventory button) that Collection was missing.
-  async function handleReady(attrs: CardAttributes, estimate: ValueEstimate | null, acquisition?: AcquisitionInput) {
+  async function handleReady(
+    attrs: CardAttributes,
+    estimate: ValueEstimate | null,
+    acquisition?: AcquisitionInput,
+    cacheInfo?: { cached: boolean; cachedAt: string | null },
+  ) {
     if (!online) {
       const input: CreateCardInput = {
         ...attrs,
@@ -71,7 +81,20 @@ export function ScanPageClient() {
       }
       return;
     }
-    setPending({ attrs, estimate, acquisition });
+    setPending({ attrs, estimate, acquisition, cached: cacheInfo?.cached ?? false, cachedAt: cacheInfo?.cachedAt ?? null });
+  }
+
+  async function handleRecalculate() {
+    if (!pending) return;
+    setRecalculating(true);
+    try {
+      const result = await estimateValue(pending.attrs, { forceRecalculate: true });
+      setPending({ ...pending, estimate: result.estimate, cached: result.cached, cachedAt: result.cachedAt });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't recalculate — try again.", "error");
+    } finally {
+      setRecalculating(false);
+    }
   }
 
   async function handleAddToCollection() {
@@ -113,7 +136,23 @@ export function ScanPageClient() {
           <p className="font-heading text-lg font-semibold text-ink">
             {pending.attrs.year} {pending.attrs.manufacturer} {pending.attrs.product} — {pending.attrs.player}
           </p>
-          {pending.estimate && <ValueEstimateBreakdown estimate={pending.estimate} />}
+          {pending.estimate && (
+            <>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                {pending.cached ? (
+                  <Badge tone="slate">
+                    Cached{pending.cachedAt ? ` from ${new Date(pending.cachedAt).toLocaleDateString()}` : ""}
+                  </Badge>
+                ) : (
+                  <span />
+                )}
+                <Button variant="ghost" size="sm" loading={recalculating} onClick={handleRecalculate}>
+                  Recalculate
+                </Button>
+              </div>
+              <ValueEstimateBreakdown estimate={pending.estimate} />
+            </>
+          )}
         </div>
         <div className="flex items-center justify-between gap-3">
           <Button variant="accent" size="lg" loading={saving} onClick={handleAddToCollection}>

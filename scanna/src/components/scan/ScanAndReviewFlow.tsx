@@ -48,11 +48,18 @@ interface ScanAndReviewFlowProps {
   saveLabel: string;
   /** Called once the card is ready to persist. `estimate` is null when one
    * genuinely couldn't be obtained (offline, Collection path only) — the
-   * backend accepts `estimate: null` on POST /api/cards. The caller owns
-   * persistence (POST /api/cards vs POST /api/lookups) and whatever comes
-   * after — this component's job stops at "identified (+ estimated, if
-   * possible)". */
-  onReady: (attrs: CardAttributes, estimate: ValueEstimate | null, acquisition?: AcquisitionInput) => Promise<void>;
+   * backend accepts `estimate: null` on POST /api/cards. `cached`/`cachedAt`
+   * reflect whether this came from value_estimate_cache instead of a live
+   * Claude call (always false/null when estimate is null) — callers use
+   * this to offer a "Recalculate" action. The caller owns persistence
+   * (POST /api/cards vs POST /api/lookups) and whatever comes after — this
+   * component's job stops at "identified (+ estimated, if possible)". */
+  onReady: (
+    attrs: CardAttributes,
+    estimate: ValueEstimate | null,
+    acquisition?: AcquisitionInput,
+    cacheInfo?: { cached: boolean; cachedAt: string | null },
+  ) => Promise<void>;
   /** Bumped by the parent to reset back to the capture step (e.g. "Look up
    * another card"). Scan itself resets by navigating back to /scan. */
   resetKey?: number;
@@ -281,7 +288,12 @@ function EstimatingStep({
     startedRef.current = true;
     setSaving(true);
     estimateValue(step.attributes)
-      .then((estimate) => onReady(step.attributes, estimate, step.acquisition))
+      .then((result) =>
+        onReady(step.attributes, result.estimate, step.acquisition, {
+          cached: result.cached,
+          cachedAt: result.cachedAt,
+        }),
+      )
       .catch(onFail)
       .finally(() => setSaving(false));
     // Runs exactly once per mount of this step.

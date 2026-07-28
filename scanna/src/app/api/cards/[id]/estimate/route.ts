@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
+// Same reasoning as /api/estimate — this also runs estimateCardValue()'s
+// live web-search research loop, so it needs the same headroom.
+export const maxDuration = 60;
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { getDb, schema } from '@/db';
 import { estimateCardValue, ClaudeEstimateError } from '@/lib/estimate/claudeEstimate';
+import { saveEstimateToCache } from '@/lib/estimate/estimateCache';
 import type { CardAttributes } from '@/domain/types';
 
 // ── POST /api/cards/[id]/estimate ───────────────────────────────────────
@@ -74,6 +78,11 @@ export async function POST(
   let estimate;
   try {
     estimate = await estimateCardValue(attributes);
+    // This route is always a deliberate, explicit recalculation (the user
+    // clicked "Re-estimate" on a card already in their collection) — it
+    // never reads the cache, only writes to it, so a later first-time
+    // /api/estimate lookup for the same card identity can benefit.
+    await saveEstimateToCache(attributes, estimate);
   } catch (err) {
     if (err instanceof ClaudeEstimateError) {
       console.error('Re-estimate failed:', err.message);

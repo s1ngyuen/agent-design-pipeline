@@ -26,10 +26,16 @@ export function recognizeCert(certNumber: string, grader: Extract<Grader, "PSA" 
   });
 }
 
-export function estimateValue(card: CardAttributes): Promise<ValueEstimate> {
-  return apiFetch<ValueEstimate>("/api/estimate", {
+export interface EstimateResult {
+  estimate: ValueEstimate;
+  cached: boolean;
+  cachedAt: string | null;
+}
+
+export function estimateValue(card: CardAttributes, opts?: { forceRecalculate?: boolean }): Promise<EstimateResult> {
+  return apiFetch<EstimateResult>("/api/estimate", {
     method: "POST",
-    body: JSON.stringify({ card }),
+    body: JSON.stringify({ card, forceRecalculate: opts?.forceRecalculate ?? false }),
   });
 }
 

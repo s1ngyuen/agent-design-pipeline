@@ -38,6 +38,16 @@ export function patchLookupAskingPrice(id: string, asking_price: number | null):
   });
 }
 
+/** Persists a freshly-recalculated estimate (from POST /api/estimate with
+ * forceRecalculate) onto an existing lookup — this never calls Claude
+ * itself, just saves a result the caller already computed. */
+export function patchLookupEstimate(id: string, estimate: ValueEstimate): Promise<Lookup> {
+  return apiFetch<Lookup>(`/api/lookups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ estimate }),
+  });
+}
+
 export function convertLookupToCard(
   id: string,
   acquisition_price: number,

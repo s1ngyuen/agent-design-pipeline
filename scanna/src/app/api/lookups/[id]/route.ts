@@ -5,15 +5,22 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { getDb, schema } from '@/db';
 import { computeBuySignal } from '@/lib/estimate/buySignal';
+import { valueEstimateSchema } from '@/lib/estimate/valueEstimateSchema';
 import type { ValueEstimate } from '@/domain/types';
 
 // ── PATCH /api/lookups/[id] ─────────────────────────────────────────────
-// Sets/updates asking_price and recomputes buy_signal server-side. No
+// Sets/updates asking_price and/or estimate, recomputing buy_signal
+// server-side. `estimate` is optional and only sent when the caller has
+// just recalculated a fresh one via POST /api/estimate (forceRecalculate) —
+// this route never calls Claude itself, it only persists a result the
+// caller already computed, same "estimate is a pure function step,
+// persistence is separate" split as the rest of this app. No
 // `version`/expectedVersion here — lookups is a deliberate deviation from
 // the optimistic-concurrency convention (write-once-then-rarely-edited,
 // single-actor in practice; see schema.ts and plan.md §4/§8 open question #4).
 const bodySchema = z.object({
-  asking_price: z.number().min(0).nullable(),
+  asking_price: z.number().min(0).nullable().optional(),
+  estimate: valueEstimateSchema.optional(),
 });
 
 export async function PATCH(
@@ -46,15 +53,18 @@ export async function PATCH(
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
-  const { asking_price } = parsed.data;
-  const estimateDetail = lookup.value_estimate_detail as ValueEstimate | null;
+  const { asking_price, estimate } = parsed.data;
+  const estimateDetail: ValueEstimate | null = estimate ?? (lookup.value_estimate_detail as ValueEstimate | null);
+  const effectiveAskingPrice =
+    asking_price !== undefined ? asking_price : lookup.asking_price != null ? Number(lookup.asking_price) : null;
   const buySignal =
-    asking_price != null && estimateDetail ? computeBuySignal(estimateDetail.range, asking_price) : null;
+    effectiveAskingPrice != null && estimateDetail ? computeBuySignal(estimateDetail.range, effectiveAskingPrice) : null;
 
   const [updated] = await getDb()
     .update(schema.lookups)
     .set({
-      asking_price: asking_price != null ? String(asking_price) : null,
+      ...(asking_price !== undefined ? { asking_price: asking_price != null ? String(asking_price) : null } : {}),
+      ...(estimate ? { estimated_value: String(estimate.range.mid), value_estimate_detail: estimate } : {}),
       buy_signal: buySignal,
     })
     .where(and(eq(schema.lookups.id, id), eq(schema.lookups.user_id, session.user.id)))
