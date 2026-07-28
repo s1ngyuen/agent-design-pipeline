@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scanna/**
+      - .github/workflows/ci.yml
+  pull_request:
+    paths:
+      - scanna/**
+      - .github/workflows/ci.yml
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: scanna/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: scanna
+      - name: Run linter
+        run: npm run lint
+        working-directory: scanna
+      - name: Build project
+        run: npm run build
+        working-directory: scanna
+      - name: Run tests
+        run: npm test --if-present
+        working-directory: scanna
+
+  migrate:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: scanna/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: scanna
+      - name: Run migrations
+        run: npm run db:migrate
+        working-directory: scanna
+        env:
+          DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+
+  deploy:
+    needs: migrate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: scanna
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.AUTH_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_VISION_API_KEY: ${{ secrets.GOOGLE_VISION_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
+          EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
+          EBAY_RU_NAME: ${{ secrets.EBAY_RU_NAME }}
+          EBAY_ENVIRONMENT: ${{ secrets.EBAY_ENVIRONMENT }}
+          EBAY_MERCHANT_LOCATION_KEY: ${{ secrets.EBAY_MERCHANT_LOCATION_KEY }}
+          EBAY_TOKEN_ENCRYPTION_KEY: ${{ secrets.EBAY_TOKEN_ENCRYPTION_KEY }}
+          TCDB_API_BASE_URL: ${{ secrets.TCDB_API_BASE_URL }}
+          TCDB_API_KEY: ${{ secrets.TCDB_API_KEY }}
+          PSA_API_KEY: ${{ secrets.PSA_API_KEY }}
