@@ -78,11 +78,6 @@ export async function POST(
   let estimate;
   try {
     estimate = await estimateCardValue(attributes);
-    // This route is always a deliberate, explicit recalculation (the user
-    // clicked "Re-estimate" on a card already in their collection) — it
-    // never reads the cache, only writes to it, so a later first-time
-    // /api/estimate lookup for the same card identity can benefit.
-    await saveEstimateToCache(attributes, estimate);
   } catch (err) {
     if (err instanceof ClaudeEstimateError) {
       console.error('Re-estimate failed:', err.message);
@@ -90,6 +85,19 @@ export async function POST(
     }
     console.error('Unexpected error in /api/cards/[id]/estimate', err);
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
+
+  // This route is always a deliberate, explicit recalculation (the user
+  // clicked "Re-estimate" on a card already in their collection) — it never
+  // reads the cache, only writes to it, so a later first-time /api/estimate
+  // lookup for the same card identity can benefit. A cache write failure
+  // (e.g. the migration adding value_estimate_cache hasn't run on this
+  // database yet) must never discard an estimate that already succeeded —
+  // that would waste the credits just spent and show a false error.
+  try {
+    await saveEstimateToCache(attributes, estimate);
+  } catch (err) {
+    console.error('Estimate cache write failed (re-estimate itself still succeeded):', err);
   }
 
   const [updated] = await getDb()

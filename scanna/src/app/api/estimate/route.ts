@@ -54,16 +54,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { card, forceRecalculate } = parsedBody.data;
 
+  // Cache is an optimization, not a hard dependency — a lookup/write
+  // failure here (e.g. the migration adding value_estimate_cache hasn't
+  // been applied to this database yet) should degrade to "just call
+  // Claude fresh," never take down estimation entirely.
   if (!forceRecalculate) {
-    const cached = await lookupCachedEstimate(card);
-    if (cached) {
-      return NextResponse.json({ estimate: cached.estimate, cached: true, cachedAt: cached.cachedAt });
+    try {
+      const cached = await lookupCachedEstimate(card);
+      if (cached) {
+        return NextResponse.json({ estimate: cached.estimate, cached: true, cachedAt: cached.cachedAt });
+      }
+    } catch (err) {
+      console.error('Estimate cache lookup failed, falling back to a live call:', err);
     }
   }
 
   try {
     const estimate = await estimateCardValue(card);
-    await saveEstimateToCache(card, estimate);
+    try {
+      await saveEstimateToCache(card, estimate);
+    } catch (err) {
+      console.error('Estimate cache write failed (estimate itself still succeeded):', err);
+    }
     return NextResponse.json({ estimate, cached: false, cachedAt: null });
   } catch (err) {
     if (err instanceof ClaudeEstimateError) {
