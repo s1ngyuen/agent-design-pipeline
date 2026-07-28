@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
+// Claude's web_search/web_fetch research loop (claudeEstimate.ts) can run up
+// to MAX_TOOL_LOOP_ITERATIONS turns and easily takes well past Vercel's
+// default function timeout (10s) — almost certainly why estimates "take
+// ages" (the function gets killed mid-research, not that Claude is just
+// slow). 60s is the max configurable on the Hobby plan without upgrading;
+// revisit if 8 iterations of real web research still needs more room.
+export const maxDuration = 60;
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { cardAttributesSchema } from '@/domain/cardAttributesSchema';
