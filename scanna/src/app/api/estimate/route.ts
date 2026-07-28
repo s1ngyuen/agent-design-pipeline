@@ -42,7 +42,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(estimate);
   } catch (err) {
     if (err instanceof ClaudeEstimateError) {
-      console.error('Claude estimate failed:', err.message);
+      // err.message is a generic wrapper ("Anthropic API request failed") —
+      // log err.cause too, since that's the actual Anthropic SDK error
+      // (status code, error type, message) needed to diagnose real failures
+      // like an invalid key or no credits, rather than just knowing *that*
+      // it failed.
+      console.error('Claude estimate failed:', err.message, '| cause:', err.cause);
       return NextResponse.json({ error: 'estimate_failed', message: err.message }, { status: 502 });
     }
     console.error('Unexpected error in /api/estimate', err);
