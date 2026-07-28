@@ -6,6 +6,7 @@ import { ScanModeToggle } from "./ScanModeToggle";
 import { IdentifiedCardSummary } from "@/components/review/IdentifiedCardSummary";
 import { ManualCorrectionForm, type AcquisitionInput } from "@/components/review/ManualCorrectionForm";
 import { Button } from "@/components/ui/Button";
+import { CheckIcon } from "@/components/ui/icons";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { recognizeVision, recognizeCert, estimateValue } from "@/lib/clientPipeline";
 import { parseCertPayload } from "@/lib/certBarcode";
@@ -13,8 +14,15 @@ import type { CardAttributes, CardAttributesConfidence, ValueEstimate } from "@/
 
 type FlowSource = "auto-id" | "cert" | "manual";
 
+// Brief confirmation flash between capture and the (slower) recognize call —
+// lets the user know the photo/code was actually captured and they can stop
+// holding the phone steady, before "recognizing" kicks in for the
+// Vision+Claude round trip.
+const CAPTURED_FLASH_MS = 600;
+
 type Step =
   | { kind: "capture" }
+  | { kind: "captured"; label: string }
   | { kind: "recognizing" }
   | { kind: "recognize-failed"; mode: ScanMode; message: string }
   | {
@@ -76,6 +84,8 @@ export function ScanAndReviewFlow({
   }
 
   async function handleAutoIdCapture(imageBase64: string) {
+    setStep({ kind: "captured", label: "Captured!" });
+    await new Promise((resolve) => setTimeout(resolve, CAPTURED_FLASH_MS));
     setStep({ kind: "recognizing" });
     try {
       const result = await recognizeVision(imageBase64);
@@ -92,6 +102,8 @@ export function ScanAndReviewFlow({
   async function handleCertDetected(rawValue: string) {
     const parsed = parseCertPayload(rawValue);
     if (!parsed) return; // not a recognizable payload — keep scanning
+    setStep({ kind: "captured", label: "Code detected!" });
+    await new Promise((resolve) => setTimeout(resolve, CAPTURED_FLASH_MS));
     setStep({ kind: "recognizing" });
     try {
       const attrs = await recognizeCert(parsed.certNumber, parsed.grader);
@@ -213,13 +225,19 @@ export function ScanAndReviewFlow({
       <CameraView
         mode={mode}
         disabled={!online}
-        busy={step.kind === "recognizing"}
+        busy={step.kind === "recognizing" || step.kind === "captured"}
         onCapture={handleAutoIdCapture}
         onCertDetected={handleCertDetected}
       />
+      {step.kind === "captured" && (
+        <p role="status" className="flex items-center gap-2 text-sm font-medium text-ink-70">
+          <CheckIcon className="h-4 w-4 text-gold" aria-hidden="true" />
+          {step.label}
+        </p>
+      )}
       {step.kind === "recognizing" && (
         <p role="status" className="text-sm font-medium text-ink-70">
-          Reading the card...
+          Analyzing card...
         </p>
       )}
       {!online && (
