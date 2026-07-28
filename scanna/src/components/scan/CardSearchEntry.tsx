@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { TextField } from "@/components/ui/Field";
 import { useChecklistSearch } from "@/hooks/useChecklistSearch";
-import { checklistResultToCardAttributes, type ChecklistCardResult } from "@/lib/checklist";
+import { checklistResultToCardAttributes, shortProductName, type ChecklistCardResult } from "@/lib/checklist";
 import type { CardAttributes } from "@/domain/types";
 
 /** Search-and-pick entry point for the scan flow's "Search" tab — an
@@ -63,8 +63,8 @@ function ChecklistResultRow({ result, onSelect }: { result: ChecklistCardResult;
         className="min-h-[44px] w-full rounded-lg border border-border bg-paper px-4 py-3 text-left transition-colors hover:bg-bone-100 focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-1"
       >
         <p className="font-mono text-xs text-ink-70">
-          {result.year} {result.manufacturer} {result.product}
-          {!isBaseSubset && ` — ${result.subset}`}
+          {result.year} {result.manufacturer} {shortProductName(result)}
+          {!isBaseSubset && ` ${result.subset}`}
         </p>
         <p className="font-heading text-base font-semibold text-ink">
           {result.player}
