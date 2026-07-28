@@ -65,7 +65,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // call succeeded, but the downstream Claude text-interpretation step
       // failed. Keeping these separate matters for debugging which stage
       // broke — 502 since this also wraps an upstream (Anthropic) API failure.
-      console.error('ClaudeParseError in /api/recognize/vision:', err.message);
+      console.error('ClaudeParseError in /api/recognize/vision:', err.message, '| cause:', err.cause);
       return NextResponse.json(
         { error: 'claude_parse_error', message: err.message },
         { status: 502 },
