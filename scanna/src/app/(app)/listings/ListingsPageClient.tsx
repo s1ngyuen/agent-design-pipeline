@@ -16,7 +16,14 @@ export function ListingsPageClient() {
           <h1 className="font-heading text-2xl font-semibold text-ink">Your eBay Listings</h1>
           <p className="text-sm text-ink-70">Everything you&apos;ve published, with status and stats synced from eBay.</p>
         </div>
-        <SyncButton onSynced={() => mutate()} />
+        <div className="flex items-center gap-2">
+          <a href="/api/ebay/oauth/start">
+            <Button type="button" variant="secondary">
+              Connect eBay
+            </Button>
+          </a>
+          <SyncButton onSynced={() => mutate()} />
+        </div>
       </div>
 
       {isLoading ? (
