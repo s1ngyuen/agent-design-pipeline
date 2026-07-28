@@ -17,6 +17,7 @@ import {
   jsonb,
   timestamp,
   index,
+  uniqueIndex,
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -157,6 +158,67 @@ export const cards = pgTable(
     userPlayerIdx:  index('cards_user_id_player_idx').on(t.user_id, t.player),
     userSportIdx:   index('cards_user_id_sport_idx').on(t.user_id, t.sport),
     searchTrgmIdx:  index('cards_search_text_trgm_idx').using('gin', sql`${t.search_text} gin_trgm_ops`),
+  }),
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// checklist_cards — real per-product checklist reference data (scraped from
+// manufacturer/hobby-media checklist spreadsheets, e.g. Beckett's downloadable
+// .xlsx checklists), NOT user inventory. Used to cross-check/enrich a
+// scanned card's extracted attributes against a known-real card, and to back
+// autocomplete in ManualCorrectionForm — replacing the never-realized TCDB
+// integration (lib/tcdb/client.ts never had a confirmed real API to call).
+// One row per printed card (base, insert, autograph, relic, parallel, etc.)
+// — a single product/year can contribute hundreds to low-thousands of rows.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const checklistCards = pgTable(
+  'checklist_cards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    sport:        sportEnum('sport').notNull(),
+    year:         text('year').notNull(),
+    manufacturer: text('manufacturer').notNull(),
+    product:      text('product').notNull(), // e.g. "2025 Topps Chrome Football"
+    // The named subset/insert/parallel-tier a card belongs to within the
+    // product, e.g. "Base", "Base - Rookies", "Chrome Autographs" — distinct
+    // from `parallel_name` (a specific colour/refractor variant), which
+    // these scraped checklists generally don't itemize card-by-card.
+    subset: text('subset').notNull(),
+
+    card_number:   text('card_number'),
+    player:        text('player').notNull(),
+    team:          text('team'),
+    parallel_name: text('parallel_name'),
+    print_run:     integer('print_run'),
+    is_auto:       boolean('is_auto').notNull().default(false),
+    is_rookie:     boolean('is_rookie').notNull().default(false),
+
+    // Where this row was scraped from — provenance, not shown to end users.
+    source_url: text('source_url'),
+
+    // Same fuzzy-search convention as cards.search_text (pg_trgm, not
+    // tsvector — see cards table above for why).
+    search_text: text('search_text').generatedAlwaysAs(
+      (): ReturnType<typeof sql> =>
+        sql`lower(coalesce(player, '') || ' ' || coalesce(team, '') || ' ' || coalesce(manufacturer, '') || ' ' || coalesce(product, '') || ' ' || coalesce(subset, '') || ' ' || coalesce(card_number, '') || ' ' || coalesce(year, ''))`,
+    ),
+
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    productSubsetIdx: index('checklist_cards_product_subset_idx').on(t.product, t.subset),
+    playerIdx:        index('checklist_cards_player_idx').on(t.player),
+    searchTrgmIdx:    index('checklist_cards_search_text_trgm_idx').using('gin', sql`${t.search_text} gin_trgm_ops`),
+    // Lets a re-import of the same source file skip rows it's already
+    // inserted (ON CONFLICT DO NOTHING) instead of accumulating duplicates.
+    uniqueCardIdx: uniqueIndex('checklist_cards_unique_idx').on(
+      t.product,
+      t.subset,
+      t.card_number,
+      t.player,
+    ),
   }),
 );
 

@@ -22,6 +22,13 @@
       "when": 1785194263091,
       "tag": "0002_chemical_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785233865598,
+      "tag": "0003_cuddly_shadow_king",
+      "breakpoints": true
     }
   ]
 }
