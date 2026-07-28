@@ -68,7 +68,14 @@ export const valueEstimateJsonSchema = {
           url: { type: ['string', 'null'] },
           price: { type: ['number', 'null'] },
           sale_date: { type: ['string', 'null'] },
-          weight: { type: 'number', minimum: 0, maximum: 1 },
+          // Anthropic's structured-output schema validator rejects
+          // minimum/maximum constraints on a 'number' type (confirmed
+          // against a real 400: "For 'number' type, properties maximum,
+          // minimum are not supported") — the 0-1 range is still enforced
+          // by the zod schema above (z.number().min(0).max(1)) as defense
+          // in depth, same "constrain via zod, not the JSON schema" split
+          // as the sport nullable-enum fix in cardTextExtractionSchema.ts.
+          weight: { type: 'number' },
           note: { type: 'string' },
         },
         required: ['type', 'label', 'source', 'url', 'price', 'sale_date', 'weight', 'note'],
