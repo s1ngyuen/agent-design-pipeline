@@ -49,6 +49,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (err) {
     if (err instanceof VisionApiError) {
       // Upstream (Vision API) failure — 502, distinct from our own 400/500s.
+      // Logged (unlike before) since the client currently discards err.message
+      // entirely and shows a generic retry prompt instead — this is the only
+      // place the real cause is visible until that's fixed client-side.
+      console.error('VisionApiError in /api/recognize/vision:', err.message);
       return NextResponse.json(
         { error: 'vision_api_error', message: err.message },
         { status: 502 },
