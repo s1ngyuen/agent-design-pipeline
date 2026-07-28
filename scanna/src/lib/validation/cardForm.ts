@@ -11,9 +11,11 @@ export function validateYear(value: string): string | null {
   return YEAR_RE.test(value.trim()) ? null : "Enter a year like 2025 or 2025/26.";
 }
 
-export function validatePrintRun(value: string): string | null {
-  if (!value.trim()) return null; // optional
-  return /^\d+$/.test(value.trim()) ? null : "Print run should be a number, like 250.";
+// Print run is free text, not necessarily numeric — most are plain numbers
+// (e.g. "250"), but some parallels/special editions use lettered or mixed
+// codes (e.g. "1/1", "5B"). Nothing to validate beyond it being optional.
+export function validatePrintRun(_value: string): string | null {
+  return null;
 }
 
 export function validateGradeGrader(grade: string, grader: string): string | null {

@@ -36,6 +36,13 @@
       "when": 1785239370612,
       "tag": "0004_hard_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785240140754,
+      "tag": "0005_high_thing",
+      "breakpoints": true
     }
   ]
 }

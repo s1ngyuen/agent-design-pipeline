@@ -17,7 +17,7 @@ export interface TcdbChecklistEntry {
   product: string;
   card_number: string;
   parallel_name: string | null;
-  print_run: number | null;
+  print_run: string | null;
 }
 
 export type TcdbSport = "NFL" | "NBA";

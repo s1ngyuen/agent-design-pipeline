@@ -65,7 +65,7 @@ function toCardAttributes(state: CardFormState): CardAttributes {
     product: state.product.trim(),
     card_number: state.card_number.trim(),
     parallel_name: state.parallel_name.trim() || null,
-    print_run: state.print_run.trim() ? Number(state.print_run.trim()) : null,
+    print_run: state.print_run.trim() || null,
     is_auto: state.is_auto,
     is_rookie: state.is_rookie,
     condition: state.condition,
@@ -364,8 +364,7 @@ export function ManualCorrectionForm({
         />
         <TextField
           label="Print run (if numbered)"
-          placeholder="/250"
-          inputMode="numeric"
+          placeholder="/250, /1, 5B..."
           value={state.print_run}
           onChange={(e) => set("print_run", e.target.value)}
           error={errors.print_run}

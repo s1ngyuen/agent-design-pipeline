@@ -25,7 +25,8 @@ export const cardTextExtractionSchema = z.object({
     product: z.string().nullable(),
     card_number: z.string().nullable(),
     parallel_name: z.string().nullable(),
-    print_run: z.number().nullable(),
+    // Free text, not necessarily numeric — see CardAttributes.print_run.
+    print_run: z.string().nullable(),
     is_auto: z.boolean().nullable(),
     is_rookie: z.boolean().nullable(),
   }),
@@ -77,7 +78,7 @@ export const cardTextExtractionJsonSchema = {
         product: { type: ['string', 'null'] },
         card_number: { type: ['string', 'null'] },
         parallel_name: { type: ['string', 'null'] },
-        print_run: { type: ['number', 'null'] },
+        print_run: { type: ['string', 'null'] },
         is_auto: { type: ['boolean', 'null'] },
         is_rookie: { type: ['boolean', 'null'] },
       },

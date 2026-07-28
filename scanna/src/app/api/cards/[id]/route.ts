@@ -47,7 +47,7 @@ const patchSchema = z.object({
   product: z.string().min(1).optional(),
   card_number: z.string().min(1).optional(),
   parallel_name: z.string().nullable().optional(),
-  print_run: z.number().int().positive().nullable().optional(),
+  print_run: z.string().min(1).nullable().optional(),
   is_auto: z.boolean().optional(),
   is_rookie: z.boolean().optional(),
   condition: conditionSchema.optional(),

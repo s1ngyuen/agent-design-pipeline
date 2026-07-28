@@ -20,7 +20,7 @@ export interface SeedRow {
   product: string;
   card_number: string;
   parallel_name: string | null;
-  print_run: number | null;
+  print_run: string | null;
   is_auto: boolean;
   is_rookie: boolean;
   condition: 'Mint' | 'Excellent' | 'Good' | 'Poor';

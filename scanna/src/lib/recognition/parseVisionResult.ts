@@ -61,7 +61,7 @@ export async function parseVisionResult(raw: VisionRawResult): Promise<ParsedVis
   const cardNumber = cardNumberMatch ? `#${cardNumberMatch[1]}` : claudeAttrs.card_number ?? '';
   confidence.card_number = cardNumberMatch ? 0.65 : claudeConfidence.card_number ?? 0.1;
 
-  const printRun = printRunMatch ? Number(printRunMatch[2]) : claudeAttrs.print_run ?? null;
+  const printRun = printRunMatch ? printRunMatch[2] : claudeAttrs.print_run ?? null;
   confidence.print_run = printRunMatch ? 0.6 : claudeConfidence.print_run ?? 0.1;
 
   // sport falls back to a low-confidence default (never left undefined) so

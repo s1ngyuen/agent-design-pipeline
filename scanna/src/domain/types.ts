@@ -33,7 +33,10 @@ export interface CardAttributes {
   product: string;
   card_number: string;
   parallel_name: string | null;
-  print_run: number | null;
+  // Free text, not necessarily numeric — most print runs are plain numbers
+  // (e.g. "250"), but some parallels/special editions use lettered or
+  // mixed codes (e.g. "1/1", "5B").
+  print_run: string | null;
   is_auto: boolean;
   is_rookie: boolean;
   condition: Condition;

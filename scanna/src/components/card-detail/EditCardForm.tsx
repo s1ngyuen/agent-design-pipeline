@@ -95,7 +95,7 @@ export function EditCardForm({ card, onSaved }: { card: Card; onSaved: (updated:
         product: product.trim(),
         card_number: cardNumber.trim(),
         parallel_name: parallel.trim() || null,
-        print_run: printRun.trim() ? Number(printRun.trim()) : null,
+        print_run: printRun.trim() || null,
         is_auto: isAuto,
         is_rookie: isRookie,
         condition,

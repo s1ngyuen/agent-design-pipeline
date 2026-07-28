@@ -19,7 +19,8 @@ export const cardAttributesSchema = z.object({
   product: z.string().min(1),
   card_number: z.string().min(1),
   parallel_name: z.string().nullable().optional().default(null),
-  print_run: z.number().int().positive().nullable().optional().default(null),
+  // Free text, not necessarily numeric — see CardAttributes.print_run.
+  print_run: z.string().min(1).nullable().optional().default(null),
   is_auto: z.boolean(),
   is_rookie: z.boolean(),
   condition: conditionSchema,

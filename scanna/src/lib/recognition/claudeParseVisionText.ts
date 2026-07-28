@@ -64,7 +64,7 @@ Fields to extract:
 - product: the specific product/set line, e.g. Chrome, Prizm, Select, Optic, Mosaic, Contenders, National Treasures, Stadium Club
 - card_number: the card number as printed, typically prefixed with "#" (e.g. "#123", "#RC-4")
 - parallel_name: a parallel/insert variant name if one is printed (e.g. "Silver Prizm", "Gold Refractor"), null for a base card or if not determinable
-- print_run: the numbered print run denominator if the card is serial-numbered (e.g. "12/99" -> 99), null if not numbered or not determinable
+- print_run: the print run denominator if the card is serial-numbered, as printed (e.g. "12/99" -> "99") — usually a plain number, but preserve it as printed if it's a lettered/mixed code (e.g. "5B"); null if not numbered or not determinable
 - is_auto: true if the text indicates this is an autographed card (e.g. "AUTOGRAPH", "AUTO", a certificate-of-authenticity marking), false if there's clear evidence it's not, null if you can't tell either way
 - is_rookie: true if the text indicates a rookie card (e.g. "ROOKIE", "RC"), false if there's clear evidence it's not, null if you can't tell either way
 
