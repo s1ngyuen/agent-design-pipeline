@@ -1,14 +1,8 @@
-// Seed script — parses the user's inventory spreadsheet into `cards`
-// (+ a matching `ebay_listings` row for every `Listed: Yes` row, per
-// plan.md's Phase 0 task 4) and imports it for a single target user.
-//
-// The real 23-row spreadsheet (brief.md's "user's existing 23-row
-// spreadsheet of inventory") has since been provided and lives at
-// `src/db/seed-data/inventory.json` — this script uses it automatically
-// whenever it's present. `seed-data/inventory.sample.json` (3 rows, each
-// tagged as a placeholder in its `notes` field) is kept only as a fallback
-// for environments where the real file hasn't been dropped in yet (e.g. a
-// fresh clone before running the import step).
+// Seed script — parses the user's inventory spreadsheet (see
+// seedInventory.ts for the shared insert logic) and imports it for a single
+// target user. Use this for local/dev databases where DATABASE_URL is a
+// plain readable env var. Production seeding goes through
+// `/api/admin/seed` instead — see that route's comment for why.
 //
 // Usage: npm run db:seed
 // Requires SEED_USER_EMAIL (or SEED_USER_ID) env var pointing at an
@@ -18,43 +12,9 @@
 // auth pattern (@auth/drizzle-adapter), not by this seed data.
 
 import 'dotenv/config';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from './index';
-
-interface SeedRow {
-  sport: 'NFL' | 'NBA' | 'UFC' | 'Soccer';
-  league: string | null;
-  player: string;
-  team: string;
-  year: string;
-  manufacturer: string;
-  product: string;
-  card_number: string;
-  parallel_name: string | null;
-  print_run: number | null;
-  is_auto: boolean;
-  is_rookie: boolean;
-  condition: 'Mint' | 'Excellent' | 'Good' | 'Poor';
-  grade: number | null;
-  grader: 'PSA' | 'BGS' | 'SGC' | 'None' | null;
-  acquisition_price: number;
-  acquisition_date: string;
-  listed: boolean;
-  start_price: number | null;
-  buy_now_price: number | null;
-  notes: string | null;
-}
-
-function loadSeedRows(): { rows: SeedRow[]; source: string } {
-  const realDataPath = join(__dirname, 'seed-data', 'inventory.json');
-  if (existsSync(realDataPath)) {
-    return { rows: JSON.parse(readFileSync(realDataPath, 'utf-8')), source: realDataPath };
-  }
-  const samplePath = join(__dirname, 'seed-data', 'inventory.sample.json');
-  return { rows: JSON.parse(readFileSync(samplePath, 'utf-8')), source: samplePath };
-}
+import { loadSeedRows, seedInventoryForUser } from './seedInventory';
 
 async function resolveTargetUserId(): Promise<string> {
   const db = getDb();
@@ -83,7 +43,6 @@ async function resolveTargetUserId(): Promise<string> {
 }
 
 async function main(): Promise<void> {
-  const db = getDb();
   const { rows, source } = loadSeedRows();
   const usingSampleData = source.endsWith('inventory.sample.json');
 
@@ -97,58 +56,7 @@ async function main(): Promise<void> {
   const userId = await resolveTargetUserId();
   console.log(`Seeding ${rows.length} card(s) for user ${userId} (source: ${source})`);
 
-  let cardsCreated = 0;
-  let listingsCreated = 0;
-
-  for (const row of rows) {
-    const [card] = await db
-      .insert(schema.cards)
-      .values({
-        user_id: userId,
-        sport: row.sport,
-        league: row.league,
-        player: row.player,
-        team: row.team,
-        year: row.year,
-        manufacturer: row.manufacturer,
-        product: row.product,
-        card_number: row.card_number,
-        parallel_name: row.parallel_name,
-        print_run: row.print_run,
-        is_auto: row.is_auto,
-        is_rookie: row.is_rookie,
-        condition: row.condition,
-        grade: row.grade != null ? String(row.grade) : null,
-        grader: row.grader,
-        photos: [],
-        acquisition_price: String(row.acquisition_price),
-        acquisition_date: row.acquisition_date,
-        // Estimated value is intentionally left null — seed data hasn't
-        // been through the Claude estimation pipeline (no fabricated
-        // estimate), and cards.status reflects Listed: Yes/No from the sheet.
-        status: row.listed ? 'listed' : 'in-stock',
-        notes: row.notes,
-      })
-      .returning();
-    cardsCreated++;
-
-    if (row.listed) {
-      // Historical listing backfilled from the spreadsheet, not created
-      // through our own draft/publish flow — so there's no real
-      // ebay_offer_id/ebay_listing_id to store. Status is 'active' because
-      // the sheet says it's currently listed; this is a backfill, not a
-      // simulation of the draft->publish gate.
-      await db.insert(schema.ebayListings).values({
-        card_id: card.id,
-        title: `${row.year} ${row.manufacturer} ${row.product} ${row.player} ${row.card_number}${row.parallel_name ? ` ${row.parallel_name}` : ''}`,
-        start_price: row.start_price != null ? String(row.start_price) : null,
-        buy_now_price: row.buy_now_price != null ? String(row.buy_now_price) : null,
-        status: 'active',
-      });
-      listingsCreated++;
-    }
-  }
-
+  const { cardsCreated, listingsCreated } = await seedInventoryForUser(userId, rows);
   console.log(`Done: ${cardsCreated} card(s), ${listingsCreated} eBay listing(s) created.`);
 }
 
