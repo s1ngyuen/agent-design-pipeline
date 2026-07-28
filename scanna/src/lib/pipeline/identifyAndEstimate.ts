@@ -28,7 +28,7 @@ export async function identifyAndEstimate(input: IdentifyInput): Promise<Identif
 
   if (input.mode === 'vision') {
     const raw = await annotateCardImage(input.imageBase64);
-    const parsed = parseVisionResult(raw);
+    const parsed = await parseVisionResult(raw);
     card = parsed.attributes;
     confidence = parsed.confidence;
   } else {

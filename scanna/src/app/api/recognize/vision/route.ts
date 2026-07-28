@@ -4,13 +4,15 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { annotateCardImage, VisionApiError } from '@/lib/recognition/visionClient';
 import { parseVisionResult } from '@/lib/recognition/parseVisionResult';
+import { ClaudeParseError } from '@/lib/recognition/claudeParseVisionText';
 
 // ── POST /api/recognize/vision ─────────────────────────────────────────────
 // Vision flow (plan.md §6): image in, uncertain-by-nature output. Calls
-// Google Cloud Vision (object localization + OCR), then a heuristic parser
-// maps tokens to CardAttributes with per-field confidence. Never persists —
-// the caller (Review page) decides what to save. Always routes to Review;
-// this endpoint never auto-saves.
+// Google Cloud Vision (object localization + OCR), then Claude interprets
+// the raw OCR text into CardAttributes with per-field confidence (plus cheap
+// regex for year/card_number/print_run — see parseVisionResult.ts). Never
+// persists — the caller (Review page) decides what to save. Always routes
+// to Review; this endpoint never auto-saves.
 
 const bodySchema = z.object({
   // Raw base64 image bytes, no `data:image/...;base64,` prefix. Capped at
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const raw = await annotateCardImage(parsedBody.data.image);
-    const result = parseVisionResult(raw);
+    const result = await parseVisionResult(raw);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof VisionApiError) {
@@ -55,6 +57,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       console.error('VisionApiError in /api/recognize/vision:', err.message);
       return NextResponse.json(
         { error: 'vision_api_error', message: err.message },
+        { status: 502 },
+      );
+    }
+    if (err instanceof ClaudeParseError) {
+      // Distinct from VisionApiError above: Vision's own OCR/localization
+      // call succeeded, but the downstream Claude text-interpretation step
+      // failed. Keeping these separate matters for debugging which stage
+      // broke — 502 since this also wraps an upstream (Anthropic) API failure.
+      console.error('ClaudeParseError in /api/recognize/vision:', err.message);
+      return NextResponse.json(
+        { error: 'claude_parse_error', message: err.message },
         { status: 502 },
       );
     }
