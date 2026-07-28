@@ -57,7 +57,18 @@ export const cardTextExtractionJsonSchema = {
       type: 'object',
       additionalProperties: false,
       properties: {
-        sport: { type: ['string', 'null'], enum: ['NFL', 'NBA', 'UFC', 'Soccer', null] },
+        // Anthropic's structured-output schema validator rejects a nullable
+        // enum expressed as `type: ['string','null'], enum: [...]` — a
+        // nullable enum needs `anyOf` instead (confirmed against a real
+        // 400: "Enum value 'NFL' does not match declared type
+        // '['string', 'null']'"). The plain nullable fields below (no enum)
+        // aren't affected by this — only enum + nullable together triggers it.
+        sport: {
+          anyOf: [
+            { type: 'string', enum: ['NFL', 'NBA', 'UFC', 'Soccer'] },
+            { type: 'null' },
+          ],
+        },
         league: { type: ['string', 'null'] },
         player: { type: ['string', 'null'] },
         team: { type: ['string', 'null'] },
